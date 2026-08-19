@@ -1,0 +1,53 @@
+name: Fire Susceptibility Pipeline
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Runs daily at 02:00 UTC. Adjust as needed.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install System Dependencies (eccodes)
+        run: sudo apt-get update && sudo apt-get install -y libeccodes-dev
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Pipeline
+        run: python main.py
+
+      - name: Prepare GitHub Pages Directory
+        run: |
+          mkdir -p public
+          mv fire_susceptibility_map.html public/index.html
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './public'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
