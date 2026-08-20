@@ -1,3 +1,4 @@
+
 import os
 import numpy as np
 import pandas as pd
@@ -84,7 +85,7 @@ try:
         step_reached_15 = xr.where((current_streak == 15) & (step_reached_15 == -1), t, step_reached_15)
 
     max_cdd.name = "max_cdd"
-    max_cdd.to_netcdf(TARGET_NC)
+    max_cdd.to_netcdf(TARGET_NC, engine="h5netcdf")
 
     if os.path.exists(TARGET_GRIB):
         os.remove(TARGET_GRIB)
@@ -251,4 +252,3 @@ try:
 except Exception as err:
     print(f"🚨 Pipeline Crash! Error trace: {str(err)}")
     raise err
-
