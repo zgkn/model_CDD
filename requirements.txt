@@ -8,3 +8,4 @@ pandas
 xarray
 folium
 matplotlib
+h5netcdf
