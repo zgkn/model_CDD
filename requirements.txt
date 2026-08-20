@@ -1,0 +1,10 @@
+eccodes
+cfgrib
+ecmwf-opendata
+scikit-image
+scipy
+numpy
+pandas
+xarray
+folium
+matplotlib
