@@ -2,7 +2,7 @@ name: Fire Susceptibility Pipeline
 
 on:
   schedule:
-    - cron: '27 2 * * *' # Runs daily at 02:00 UTC. Adjust as needed.
+    - cron: '3 2 * * *' # Runs daily at 02:00 UTC. Adjust as needed.
   workflow_dispatch:
 
 permissions:
