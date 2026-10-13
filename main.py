@@ -351,14 +351,10 @@ def build_map(max_cdd, first_day, dates, lats, lons, base_time, out_html, land_m
         attr="Imagery &copy; Esri, Maxar, Earthstar Geographics",
         name="Satellite",
         overlay=False,
+        show=True,
     ).add_to(m)
-    folium.TileLayer(
-        tiles="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        attr="&copy; OpenStreetMap contributors &copy; CARTO",
-        name="Light map",
-        overlay=False,
-        subdomains="abcd",
-    ).add_to(m)
+    # Only one base layer may be added to the map at load; the other is switched in via the control.
+    folium.TileLayer(tiles="CartoDB positron", name="Light map", overlay=False, show=False).add_to(m)
 
     folium.raster_layers.ImageOverlay(
         image=raster_data_uri(max_cdd, lats),
