@@ -2,52 +2,78 @@ name: Fire Susceptibility Pipeline
 
 on:
   schedule:
-    - cron: '3 2 * * *' # Runs daily at 02:00 UTC. Adjust as needed.
+    # ECMWF publishes the 00Z / 12Z runs roughly 7h40m later; run shortly after each.
+    - cron: '45 8 * * *'
+    - cron: '45 20 * * *'
+  push:
+    branches: [main]
+    paths: ['main.py', 'requirements*.txt', 'tests/**', '.github/workflows/pipeline.yml']
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  build:
+    # Only build and publish the map on schedule / manual runs / pushes to main, never for PRs.
+    if: github.event_name != 'pull_request'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - run: pip install -r requirements.txt
+
+      - name: Run pipeline
+        run: python main.py --out-dir public
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+      actions: write # lets the keep-alive step below re-enable this workflow
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Install System Dependencies (eccodes)
-        run: sudo apt-get update && sudo apt-get install -y libeccodes-dev
-
-      - name: Install Python Dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run Pipeline
-        run: python main.py
-
-      - name: Prepare GitHub Pages Directory
-        run: |
-          mkdir -p public
-          mv fire_susceptibility_map.html public/index.html
-
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './public'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
+
+      # GitHub disables scheduled workflows after 60 days without repository activity.
+      # Re-enabling the workflow resets that timer. Best-effort: never fail a good deploy over it.
+      - name: Keep scheduled workflow alive
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/pipeline.yml/enable"

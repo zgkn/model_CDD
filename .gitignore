@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+.venv/
+venv/
+
+# generated output
+public/
+*.grib
+*.grib2
+*.idx
+*.nc
